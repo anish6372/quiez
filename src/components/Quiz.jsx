@@ -64,11 +64,14 @@ function Quiz() {
   const [questionTimer, setQuestionTimer] = useState(30)
   const [quizTimer, setQuizTimer] = useState(1800) 
   const [isMultipleChoice, setIsMultipleChoice] = useState(true)
+  const [error, setError] = useState(null)
+  const [answerError, setAnswerError] = useState(null)
+  const [attempts, setAttempts] = useState(0)
 
   useEffect(() => {
     if (questionTimer > 0) {
       const interval = setInterval(() => {
-        setQuestionTimer(questionTimer - 1)
+        setQuestionTimer(prev => prev - 1)
       }, 1000)
       return () => clearInterval(interval)
     } else {
@@ -79,7 +82,7 @@ function Quiz() {
   useEffect(() => {
     if (quizTimer > 0) {
       const interval = setInterval(() => {
-        setQuizTimer(quizTimer - 1)
+        setQuizTimer(prev => prev - 1)
       }, 1000)
       return () => clearInterval(interval)
     } else {
@@ -89,9 +92,17 @@ function Quiz() {
   }, [quizTimer])
 
   const handleAnswer = (selectedOption) => {
+    if (!selectedOption) {
+      setAnswerError('Answer is required.')
+      return
+    }
+    setAnswerError(null)
     const currentQuestions = isMultipleChoice ? multipleChoiceQuestions : integerTypeQuestions
     if (selectedOption === currentQuestions[currentQuestionIndex].answer) {
-      setScore(score + 1)
+      setScore(prev => prev + 1)
+      setAttempts(0) 
+    } else {
+      setAttempts(prev => prev + 1)
     }
     handleNextQuestion()
   }
@@ -100,7 +111,7 @@ function Quiz() {
     setQuestionTimer(30)
     const currentQuestions = isMultipleChoice ? multipleChoiceQuestions : integerTypeQuestions
     if (currentQuestionIndex < currentQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
+      setCurrentQuestionIndex(prev => prev + 1)
     } else if (isMultipleChoice) {
       setIsMultipleChoice(false)
       setCurrentQuestionIndex(0)
@@ -111,22 +122,26 @@ function Quiz() {
   }
 
   const saveQuizHistory = async () => {
-    const db = await openDB('quizDB', 1, {
-      upgrade(db) {
-        db.createObjectStore('history', { keyPath: 'id', autoIncrement: true })
-      }
-    })
-    await db.add('history', {
-      date: new Date(),
-      score,
-      total: multipleChoiceQuestions.length + integerTypeQuestions.length
-    })
+    try {
+      const db = await openDB('quizDB', 1, {
+        upgrade(db) {
+          db.createObjectStore('history', { keyPath: 'id', autoIncrement: true })
+        }
+      })
+      await db.add('history', {
+        date: new Date(),
+        score,
+        total: multipleChoiceQuestions.length + integerTypeQuestions.length
+      })
+    } catch (err) {
+      setError('Failed to save quiz history.')
+    }
   }
 
   const currentQuestions = isMultipleChoice ? multipleChoiceQuestions : integerTypeQuestions
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-purple-500">
       <div className="bg-white shadow-md rounded-lg p-6 max-w-4xl w-full">
         <h2 className="text-3xl font-bold mb-4">Quiz Instructions</h2>
         <ul className="list-disc list-inside mb-4">
@@ -138,6 +153,8 @@ function Quiz() {
         <div className="text-lg font-semibold mb-4">
           Time remaining: {Math.floor(quizTimer / 60)}:{quizTimer % 60}
         </div>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {answerError && <div className="text-red-500 mb-4">{answerError}</div>}
         {showScoreboard ? (
           <Scoreboard score={score} total={multipleChoiceQuestions.length + integerTypeQuestions.length} />
         ) : (
@@ -145,6 +162,7 @@ function Quiz() {
             question={currentQuestions[currentQuestionIndex]}
             timer={questionTimer}
             onAnswer={handleAnswer}
+            attempts={attempts}
           />
         )}
       </div>

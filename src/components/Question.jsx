@@ -1,16 +1,14 @@
+import { useState } from 'react'
 
+function Question({ question, timer, onAnswer, attempts }) {
+  const [selectedOption, setSelectedOption] = useState('')
 
+  const handleOptionChange = (e) => {
+    setSelectedOption(e.target.value)
+  }
 
-
-function Question({ question, timer, onAnswer }) {
-
-
- 
-
-  const handleInputChange = (e) => {
-    if (e.target.value.trim() !== "") {
-      onAnswer(e.target.value.trim())
-    }
+  const handleSubmit = () => {
+    onAnswer(selectedOption)
   }
 
   return (
@@ -19,27 +17,40 @@ function Question({ question, timer, onAnswer }) {
       {question.options ? (
         <div className="grid grid-cols-2 gap-4 mb-4">
           {question.options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => onAnswer(option)}
-              className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
-            >
-              {option}
-            </button>
+            <div key={index} className="mb-2">
+              <label>
+                <input
+                  type="radio"
+                  name="option"
+                  value={option}
+                  checked={selectedOption === option}
+                  onChange={handleOptionChange}
+                />
+                {option}
+              </label>
+            </div>
           ))}
         </div>
       ) : (
         <div className="mb-4">
           <input
             type="text"
+            value={selectedOption}
+            onChange={(e) => setSelectedOption(e.target.value)}
             className="border border-gray-300 rounded py-2 px-4 w-full"
             placeholder="Enter your answer"
-           
-            onBlur={handleInputChange}
           />
         </div>
       )}
       <p className="text-lg font-semibold">Time remaining: {timer} seconds</p>
+      {attempts > 0 && (
+        <div className="text-red-500 mb-4">
+          Incorrect answer. Attempts: {attempts}
+        </div>
+      )}
+      <button onClick={handleSubmit} className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700">
+        Submit
+      </button>
     </div>
   )
 }
